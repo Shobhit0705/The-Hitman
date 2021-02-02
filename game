@@ -1,0 +1,508 @@
+import pygame
+from pygame.locals import *
+from pygame.math import Vector2
+from pygame import mixer
+import random
+import math
+
+
+pygame.init()
+clock = pygame.time.Clock()  # importing clock from time to make image sprite
+fps = 60  # Declaring the fps(frames per second)
+
+pygame.display.set_caption('The Hitman')
+screen = pygame.display.set_mode((1366, 768), pygame.FULLSCREEN)  # Declaring the window size
+# tiles
+tile_size = 50
+
+# enemy collision/game over
+game_over = 0
+
+#creating the game over text
+Game_Over_Font = pygame.font.Font('freesansbold.ttf', 60)
+Credital_font = pygame.font.Font('freesansbold.ttf', 30)
+#declaring different menu:
+main_menu = True
+info_menu = False
+
+# declaring images
+icon = pygame.image.load('game icon.png')
+bg_image = pygame.image.load('game background.png')
+restart_image = pygame.image.load('Restart button.png')
+restart_image = pygame.transform.scale(restart_image, (200, 100))
+start_image = pygame.image.load('start button.png')
+start_image = pygame.transform.scale(start_image, (200, 100))
+quit_image = pygame.image.load('quit button.png')
+quit_image = pygame.transform.scale(quit_image, (200, 100))
+main_menu_bg = pygame.image.load('menu background .png')
+main_menu_bg = pygame.transform.scale(main_menu_bg, (1366, 768))
+menu_btn = pygame.image.load('main menu return.png')
+menu_btn = pygame.transform.scale(menu_btn, (200, 100))
+info_btn = pygame.image.load('info.png')
+info_btn = pygame.transform.scale(info_btn, (200, 100))
+info_menuT = pygame.image.load('info memi.png')
+info_menuT = pygame.transform.scale(info_menuT, (700, 700))
+info_bg = pygame.image.load('2021-02-01.png')
+info_bg = pygame.transform.scale(info_bg, (1366, 768))
+
+#declaring sounds
+main_music = pygame.mixer.Sound('Main background.wav')
+main_music.set_volume(0.5)
+gunshot = pygame.mixer.Sound('Realistic Gunshot Sound Effect.mp3')
+player_died = pygame.mixer.Sound('player death.mp3')
+button_click = pygame.mixer.Sound('Button click sound effect.mp3')
+enemy_death = pygame.mixer.Sound('enemy death.mp3')
+main_music.play(-1)
+
+
+class Button:  #declaring a class for all buttons in the game
+    def __init__(self, x, y, image):
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.clicked = False
+
+    def draw(self):
+        action = False
+
+        pos = pygame.mouse.get_pos()  # getting the mouse position
+
+        if self.rect.collidepoint(pos):
+            if pygame.mouse.get_pressed()[0] == 1 and self.clicked is False:
+                action = True
+                self.clicked = True
+                button_click.play()
+        if pygame.mouse.get_pressed()[0] == 0:
+            self.clicked = False
+
+        screen.blit(self.image, self.rect)
+
+        return action
+
+
+class World:
+    def __init__(self, data):
+        self.tile_list = []
+        border = pygame.image.load('dark green.png')  # declaring the border as an image
+        row_count = 0
+        for row in data:
+            col_count = 0
+            for tile in row:
+                if tile == 1:
+                    img = pygame.transform.scale(border, (tile_size, tile_size))  # Declaring if the tile is an image
+                    img_rect = img.get_rect()
+                    img_rect.x = col_count * tile_size
+                    img_rect.y = row_count * tile_size
+                    tile = (img, img_rect)
+                    self.tile_list.append(tile)
+                col_count += 1
+            row_count += 1
+
+    def draw(self):
+        for tile in self.tile_list:
+            screen.blit(tile[0], tile[1])
+
+
+world_data = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+]
+
+world = World(world_data)
+
+
+# declaring the player
+class Player(pygame.sprite.Sprite):
+    def __init__(self, x, y):  # declaring all the functions in it
+        self.reset(x, y)
+        pygame.sprite.Sprite.__init__(self)
+        self.images_up = []
+        self.images_down = []
+        self.images_right = []
+        self.images_left = []
+        self.index = 0
+        self.counter = 0
+        img_up = pygame.image.load('main player1.png')
+        img_up = pygame.transform.scale(img_up, (60, 60))  # (Width, height)
+        img_down = pygame.image.load('hitman player down.png')
+        img_down = pygame.transform.scale(img_down, (60, 60))
+        img_right = pygame.image.load('main player Right.png')  # Declaring the characters image facing right
+        img_right = pygame.transform.scale(img_right, (60, 60))
+        img_left = pygame.image.load('hitman player LEFT.png')  # Declaring the characters image facing left
+        img_left = pygame.transform.scale(img_left, (60, 60))
+        self.images_up.append(img_up)
+        self.images_down.append(img_down)
+        self.images_right.append(img_right)
+        self.images_left.append(img_left)
+        self.dead_image = pygame.image.load('player_death.png')
+        self.dead_image = pygame.transform.scale(self.dead_image, (60, 60))
+        self.image = self.images_up[self.index]  # Declares the direction the player will be facing when spawning
+        self.rect = self.image.get_rect()
+        self.speed = 0
+        self.rect.x = x
+        self.rect.y = y
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
+        self.direction = Vector2(1, 0)  # declaring the direction facing
+        self.last_shot = pygame.time.get_ticks()
+
+    def update(self, game_over):  # Allows the player to be placed and moved
+        screen.blit(self.image, self.rect)
+        xx = 0  # code to finding the players coordinates
+        xy = 0
+        cooldown = 200  # setting the bullet cooldown time in milliseconds
+
+        if game_over == 0:
+            key = pygame.key.get_pressed()  # declaring what buttons will be pressed
+            # Moves character left
+            if key[pygame.K_a]:
+                xx -= 5  # variable -= speed
+                self.counter += 1
+                self.direction = -1
+            if key[pygame.K_a] and key[pygame.K_LSHIFT]:  # If player presses both keys they go faster
+                xx -= 8
+                self.counter += 1
+                self.direction = -1
+            if key[pygame.K_LEFT]:
+                xx -= 5
+                self.counter += 1
+                self.direction = -1
+            if key[pygame.K_LEFT] and key[pygame.K_LSHIFT]:
+                xx -= 8
+                self.counter += 1
+                self.direction = -1
+            # Moves character right
+            if key[pygame.K_d]:
+                xx += 5
+                self.counter += 1
+                self.direction = 1
+            if key[pygame.K_d] and key[pygame.K_LSHIFT]:
+                xx += 8
+                self.counter += 1
+                self.direction = 1
+            if key[pygame.K_RIGHT]:
+                xx += 5
+                self.counter += 1
+                self.direction = 1
+            if key[pygame.K_RIGHT] and key[pygame.K_LSHIFT]:
+                xx += 8
+                self.counter += 1
+                self.direction = 1
+            # Move character up
+            if key[pygame.K_w]:
+                xy -= 5
+                self.counter += 1
+                self.direction = 2
+            if key[pygame.K_w] and key[pygame.K_LSHIFT]:  # If player presses both keys they go faster
+                xy -= 8
+                self.counter += 1
+                self.direction = 2
+            if key[pygame.K_UP]:
+                xy -= 5
+                self.counter += 1
+                self.direction = 2
+            if key[pygame.K_UP] and key[pygame.K_LSHIFT]:  # If player presses both keys they go faster
+                xy -= 8
+                self.counter += 1
+                self.direction = 2
+            # Moves character down:
+            if key[pygame.K_s]:
+                xy += 5
+                self.counter += 1
+                self.direction = -2
+            if key[pygame.K_s] and key[pygame.K_LSHIFT]:  # If player presses both keys they go faster
+                xy += 8
+                self.counter += 1
+                self.direction = -2
+            if key[pygame.K_DOWN]:
+                xy += 5
+                self.counter += 1
+                self.direction = -2
+            if key[pygame.K_DOWN] and key[pygame.K_LSHIFT]:  # If player presses both keys they go faster
+                xy += 8
+                self.counter += 1
+                self.direction = -2
+
+            # limiting how many bullets can be shot
+            time_now = pygame.time.get_ticks()
+            # shooting bullets:
+            for event in pygame.event.get():
+                if event.type == MOUSEBUTTONDOWN and time_now - self.last_shot > cooldown:
+                    bullet = Bullet(self.rect.centerx, self.rect.centery)
+                    bullet_group.add(bullet)
+                    self.last_shot = time_now
+                    gunshot.play()
+            # Image sprite
+            if self.direction == 1:
+                self.image = self.images_right[self.index]
+            if self.direction == -1:
+                self.image = self.images_left[self.index]
+
+            if self.direction == 2:
+                self.image = self.images_up[self.index]
+            if self.direction == -2:
+                self.image = self.images_down[self.index]
+
+            if pygame.sprite.spritecollide(self, enemy_group, False):
+                game_over = -1
+                player_died.play()
+
+            self.rect.x += xx
+            self.rect.y += xy
+            # boundaries collision with player
+
+            if self.rect.y >= 640:
+                self.rect.x = self.rect.x
+                self.rect.y = 640
+            if self.rect.y <= 50:
+                self.rect.x = self.rect.x
+                self.rect.y = 50
+            if self.rect.x <= 50:
+                self.rect.x = 50
+                self.rect.y = self.rect.y
+            if self.rect.x >= 1240:
+                self.rect.x = 1240
+                self.rect.y = self.rect.y
+
+        elif game_over == -1:
+            self.image = self.dead_image
+
+        return game_over
+
+    def reset(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.images_up = []
+        self.images_down = []
+        self.images_right = []
+        self.images_left = []
+        self.index = 0
+        self.counter = 0
+        img_up = pygame.image.load('main player1.png')
+        img_up = pygame.transform.scale(img_up, (60, 60))  # (Width, height)
+        img_down = pygame.image.load('hitman player down.png')
+        img_down = pygame.transform.scale(img_down, (60, 60))
+        img_right = pygame.image.load('main player Right.png')  # Declaring the characters image facing right
+        img_right = pygame.transform.scale(img_right, (60, 60))
+        img_left = pygame.image.load('hitman player LEFT.png')  # Declaring the characters image facing left
+        img_left = pygame.transform.scale(img_left, (60, 60))
+        self.images_up.append(img_up)
+        self.images_down.append(img_down)
+        self.images_right.append(img_right)
+        self.images_left.append(img_left)
+        self.dead_image = pygame.image.load('player_death.png')
+        self.dead_image = pygame.transform.scale(self.dead_image, (60, 60))
+        self.image = self.images_up[self.index]  # Declares the direction the player will be facing when spawning
+        self.rect = self.image.get_rect()
+        self.speed = 0
+        self.rect.x = x
+        self.rect.y = y
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
+        self.direction = Vector2(1, 0)  # declaring the direction facing
+        self.last_shot = pygame.time.get_ticks()
+
+
+class Enemy(pygame.sprite.Sprite):  # Declaring the enemy(s) class
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.images = []
+        self.index = 0
+        self.counter = 0
+        img = pygame.image.load('enemy.png')
+        img = pygame.transform.scale(img, (60, 60))  # (Width, height)
+        self.images.append(img)
+        self.image = self.images[self.index]  # Declares the direction the enemy  will be facing when spawning
+        self.rect = self.image.get_rect()
+        self.speed = 2
+        self.rect.x = x
+        self.rect.y = y
+        self.rect.center = [x, y]
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
+        self.direction = Vector2(1, 0)  # declaring the direction facing
+
+    def update(self):
+        screen.blit(self.image, self.rect)
+        # Declaring the enemy to follow the player.
+        ax, ay = player.rect.x - self.rect.x, player.rect.y - self.rect.y
+        dist = math.hypot(ax, ay)
+        ax, ay = ax / dist, ay / dist
+        self.rect.x += ax * self.speed  # the enemy will follow the player with the given speed
+        self.rect.y += ay * self.speed
+        dirvect = pygame.math.Vector2(player.rect.x - self.rect.x,
+                                      player.rect.y - self.rect.y)
+        dirvect.normalize()
+        dirvect.scale_to_length(self.speed)
+        self.rect.move_ip(dirvect)
+
+
+# Creating multiple enemies
+enemy_group = pygame.sprite.Group()  # Declaring the enemy into the same sprite group
+
+enemy = Enemy(random.randint(0, 1000), random.randint(0, 1000))  # declaring enemies spawn point
+#                            (min, max)
+enemy_group.add(enemy)
+enemy = Enemy(random.randint(0, 60), random.randint(0, 1000))  # creating multiple enemies in the group
+enemy_group.add(enemy)
+enemy = Enemy(random.randint(1250, 5000), random.randint(0, 1000))
+enemy_group.add(enemy)
+enemy = Enemy(random.randint(0, 1000), random.randint(0, 650))
+enemy_group.add(enemy)
+enemy_group.add(enemy)
+enemy = Enemy(random.randint(0, 1000), random.randint(0, 650))
+enemy_group.add(enemy)
+
+
+class Bullet(pygame.sprite.Sprite):  # to create a bullet class
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load('bullet.png')  # the image used for python
+        self.rect = self.image.get_rect()
+        self.rect.center = [x, y]
+        self.speed = 50  # the speed of the bullet
+
+    def update(self):  # declaring which direction the bullet will go once being shot
+        x, y = pygame.mouse.get_pos()
+        screen.blit(self.image, self.rect)
+        ax, ay = x - player.rect.x, y - player.rect.y
+        dist = math.hypot(ax, ay)
+        bx, by = ax / dist, ay / dist
+        self.rect.x += bx * self.speed  # bullet will shoot towards the mouse cursor at this speed.
+        self.rect.y += by * self.speed
+        dirvect = pygame.math.Vector2(x - player.rect.x,
+                                      y - player.rect.y)
+        dirvect.normalize()
+        dirvect.scale_to_length(self.speed)
+
+        if self.rect.y >= 650:
+            self.kill()
+        if self.rect.y <= 50:
+            self.kill()
+        if self.rect.x <= 50:
+            self.kill()
+        if self.rect.x >= 1240:
+            self.kill()
+
+        if pygame.sprite.spritecollide(self, enemy_group, True):  # declaring what happens when bullet and enemy collide
+            enemy_death.play()
+            self.kill()
+            enemy = Enemy(random.randint(0, 1000), random.randint(0, 5000))
+            enemy_group.add(enemy)
+            enemy = Enemy(random.randint(0, 1000), random.randint(0, 5000))
+            enemy_group.add(enemy)
+
+
+player_group = pygame.sprite.Group()  # declaring both player and bullet class in the same sprite group
+
+bullet_group = pygame.sprite.Group()  # declaring both player and bullet class in the same sprite group
+player = Player(600, 600)  # Declaring players spawn point
+
+running = True
+
+# creating buttons
+
+restart_button = Button(200, 500, restart_image)
+start_button = Button(400, 500, start_image)
+quit_button = Button(850, 500, quit_image)
+menu_return_button = Button(1000, 500, menu_btn)
+info_button = Button(900, 500, info_btn)
+
+while running:
+    clock.tick(fps)
+    pygame.display.set_icon(icon)
+    screen.blit(bg_image, (0, 0))
+
+    if main_menu is True:
+        screen.blit(main_menu_bg, (0, 0))
+        if quit_button.draw():
+            running = False
+        if start_button.draw():
+            main_menu = False
+            restart_button.draw()
+
+
+
+
+    else:
+        world.draw()
+        bullet_group.update()
+        player_group.draw(screen)
+        bullet_group.draw(screen)
+        enemy_group.draw(screen)
+        bullet_group.update()
+
+        if game_over == 0:
+            # score value:
+            enemy_group.update()
+            info_menu is False
+
+        game_over = player.update(game_over)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+            pygame.quit()
+
+    if game_over == -1 and main_menu is False:
+        text = Game_Over_Font.render("Game over!", True, "Red")
+        screen.blit(text, (500, 100))
+        if restart_button.draw():
+            player.reset(600, 600)  # Declaring players spawn point
+            game_over = 0
+            enemy_group.empty()
+            enemy = Enemy(random.randint(0, 1000), random.randint(0, 1000))  # declaring enemies spawn point
+            enemy_group.add(enemy)
+            enemy = Enemy(random.randint(0, 60), random.randint(0, 1000))  # creating multiple enemies in the group
+            enemy_group.add(enemy)
+            enemy = Enemy(random.randint(1250, 5000), random.randint(0, 1000))
+            enemy_group.add(enemy)
+            enemy = Enemy(random.randint(0, 1000), random.randint(0, 650))
+            enemy_group.add(enemy)
+            enemy_group.add(enemy)
+            enemy = Enemy(random.randint(0, 1000), random.randint(0, 650))
+            enemy_group.add(enemy)
+            bullet_group.update()
+
+        if main_menu is True:
+            menu_return_button = Button(3000, 1400, menu_btn)
+        elif main_menu is False:
+            menu_return_button = Button(1100, 500, menu_btn)
+            quit_button = Button(600, 500, quit_image)
+        if quit_button.draw():
+            running = False
+        if menu_return_button.draw() and pygame.mouse.get_pressed()[0] == 1:
+            main_menu = True
+            info_menu = False
+            quit_button = Button(850, 500, quit_image)
+
+
+    if main_menu is True:
+
+        By_who = Credital_font.render("By Shobhit Chaudhary 10A", True, "Orange")
+        screen.blit(By_who, (900, 150))
+
+    if game_over == 0 and main_menu is False:
+        info_button = Button(2000, 5000, info_btn)
+    elif main_menu is True:
+        info_button = Button(900, 500, info_btn)
+
+
+
+
+
+    pygame.display.update()
